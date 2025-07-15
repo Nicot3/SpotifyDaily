@@ -5,7 +5,7 @@ namespace SpotifyDaily.Worker.Controllers
 {
     [Route("[controller]")]
     [ApiController]
-    public class TokenController(ISpotifyClientService spotifyClientService) : ControllerBase
+    public class TokenController(ISpotifyClientService spotifyClientService, IPlaylistService playlistService) : ControllerBase
     {
         [HttpGet("register")]
         public async Task<IActionResult> RegisterTokenAsync([FromQuery] string? code, CancellationToken cancellationToken = default)
@@ -18,6 +18,7 @@ namespace SpotifyDaily.Worker.Controllers
             try
             {
                 await spotifyClientService.ConfigureNewClientAsync(code, cancellationToken);
+                await playlistService.UpdateDailyPlaylistAsync(cancellationToken);
             }
             catch (Exception e)
             {
