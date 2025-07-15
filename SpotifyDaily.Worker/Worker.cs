@@ -1,3 +1,5 @@
+using SpotifyDaily.Worker.Exceptions;
+using SpotifyDaily.Worker.Helpers;
 using SpotifyDaily.Worker.Models;
 using SpotifyDaily.Worker.Services.Contracts;
 
@@ -13,15 +15,24 @@ namespace SpotifyDaily.Worker
 
             _appConfig = appConfigService.Current;
 
+            if (_appConfig == null)
+            {
+                throw new WorkerException("AppConfig cannot be retrieved.");
+            }
+
+            logger.LogInformation("Spotify Daily Worker started at: {Time}", DateTime.Now);
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 DateTime now = DateTime.Now;
-                DateTime? lastRun = _appConfig.LastRun;
+                DateOnly dateNow = DateOnly.FromDateTime(DateTime.Now);
+                DateOnly lastRun = DateOnly.FromDateTime(_appConfig.LastRun ?? DateTime.MinValue);
 
                 //If the worker doesn't run today, run it
-                if (lastRun != null && !(lastRun?.Date < now.Date))
+                if (!(lastRun < dateNow))
                 {
                     await WaitForNextRun(now, stoppingToken);
+                    continue;
                 }
                 try
                 {
@@ -46,9 +57,9 @@ namespace SpotifyDaily.Worker
 
         private async Task WaitForNextRun(DateTime date, CancellationToken cancellationToken)
         {
-                logger.LogInformation("Waiting for the next run at: {Time}", date.AddMinutes(1));
-            // Wait for the next run if the playlist service is not configured
-            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            var nextRunDelay = date.CalculateNextRunDelay();
+            logger.LogInformation("Waiting for the next run at: {Time}", date.Add(nextRunDelay));
+            await Task.Delay(nextRunDelay, cancellationToken);
         }
 
         private void OnAppConfigChanged(AppConfig config)
