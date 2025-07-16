@@ -107,7 +107,7 @@ public class SpotifyClientService(IAppConfigService appConfigService, ILogger<Sp
 
         if (_appConfig.ExpireDate < DateTime.Now)
         {
-            //If token is expired, set client to null to try configure an existing one
+            //If token is expired, set client to null to try to configure an existing one
             Client = null;
         }
 
