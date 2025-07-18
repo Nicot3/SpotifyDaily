@@ -1,15 +1,14 @@
-﻿namespace SpotifyDaily.Worker.Exceptions
+﻿namespace SpotifyDaily.Worker.Exceptions;
+
+public class ClientTokenExpiredException : Exception
 {
-    public class ClientTokenExpiredException : Exception
+    public ClientTokenExpiredException() : base()
     {
-        public ClientTokenExpiredException() : base()
-        {
-            
-        }
 
-        public ClientTokenExpiredException(string message) : base(message)
-        {
+    }
 
-        }
+    public ClientTokenExpiredException(string message) : base(message)
+    {
+
     }
 }

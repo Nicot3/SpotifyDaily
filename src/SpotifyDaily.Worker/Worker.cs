@@ -5,71 +5,70 @@ using SpotifyDaily.Worker.Models;
 using SpotifyDaily.Worker.Options;
 using SpotifyDaily.Worker.Services.Contracts;
 
-namespace SpotifyDaily.Worker
+namespace SpotifyDaily.Worker;
+
+public class Worker(ILogger<Worker> logger,
+                    IAppConfigService appConfigService,
+                    IPlaylistService playlistService,
+                    IOptions<WorkerOptions> workerOptions) : BackgroundService
 {
-    public class Worker(ILogger<Worker> logger,
-                        IAppConfigService appConfigService,
-                        IPlaylistService playlistService,
-                        IOptions<WorkerOptions> workerOptions) : BackgroundService
+    private AppConfig? _appConfig;
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        private AppConfig? _appConfig;
+        appConfigService.OnChange += OnAppConfigChanged;
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        _appConfig = appConfigService.Current;
+
+        if (_appConfig == null)
         {
-            appConfigService.OnChange += OnAppConfigChanged;
+            throw new WorkerException("AppConfig cannot be retrieved.");
+        }
 
-            _appConfig = appConfigService.Current;
+        logger.LogInformation("Spotify Daily Worker started at: {Time}", DateTime.Now);
 
-            if (_appConfig == null)
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            DateTime now = DateTime.Now;
+            DateOnly dateNow = DateOnly.FromDateTime(DateTime.Now);
+            DateOnly lastRun = DateOnly.FromDateTime(_appConfig.LastRun ?? DateTime.MinValue);
+
+            //If the worker doesn't run today, run it
+            if (lastRun >= dateNow)
             {
-                throw new WorkerException("AppConfig cannot be retrieved.");
+                await WaitForNextRun(now, stoppingToken);
+                continue;
             }
-
-            logger.LogInformation("Spotify Daily Worker started at: {Time}", DateTime.Now);
-
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
-                DateTime now = DateTime.Now;
-                DateOnly dateNow = DateOnly.FromDateTime(DateTime.Now);
-                DateOnly lastRun = DateOnly.FromDateTime(_appConfig.LastRun ?? DateTime.MinValue);
+                logger.LogInformation("Running Spotify Daily Worker at: {Time}", now);
 
-                //If the worker doesn't run today, run it
-                if (lastRun >= dateNow)
-                {
-                    await WaitForNextRun(now, stoppingToken);
-                    continue;
-                }
-                try
-                {
-                    logger.LogInformation("Running Spotify Daily Worker at: {Time}", now);
+                await playlistService.UpdateDailyPlaylistAsync(stoppingToken);
 
-                    await playlistService.UpdateDailyPlaylistAsync(stoppingToken);
+                _appConfig.LastRun = now;
+                await appConfigService.UpdateAsync(_appConfig);
 
-                    _appConfig.LastRun = now;
-                    await appConfigService.UpdateAsync(_appConfig);
-
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "An error occurred while running the Spotify Daily Worker.");
-                }
-                finally
-                {
-                    await WaitForNextRun(now, stoppingToken);
-                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while running the Spotify Daily Worker.");
+            }
+            finally
+            {
+                await WaitForNextRun(now, stoppingToken);
             }
         }
+    }
 
-        private async Task WaitForNextRun(DateTime date, CancellationToken cancellationToken)
-        {
-            var nextRunDelay = date.CalculateNextRunDelay(workerOptions.Value.RunHour);
-            logger.LogInformation("Waiting for the next run at: {Time}", date.Add(nextRunDelay));
-            await Task.Delay(nextRunDelay, cancellationToken);
-        }
+    private async Task WaitForNextRun(DateTime date, CancellationToken cancellationToken)
+    {
+        var nextRunDelay = date.CalculateNextRunDelay(workerOptions.Value.RunHour);
+        logger.LogInformation("Waiting for the next run at: {Time}", date.Add(nextRunDelay));
+        await Task.Delay(nextRunDelay, cancellationToken);
+    }
 
-        private void OnAppConfigChanged(AppConfig config)
-        {
-            _appConfig = config;
-        }
+    private void OnAppConfigChanged(AppConfig config)
+    {
+        _appConfig = config;
     }
 }
