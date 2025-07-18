@@ -18,6 +18,7 @@ public static class Bootstrapper
 
         builder.Services.Configure<AppConfig>(builder.Configuration.GetSection("AppConfig"));
         builder.Services.Configure<SpotifyOptions>(builder.Configuration.GetSection("Spotify"));
+        builder.Services.Configure<WorkerOptions>(builder.Configuration.GetSection("Worker"));
 
         return builder;
     }
