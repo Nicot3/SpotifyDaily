@@ -11,7 +11,7 @@ public class PlaylistService(ILogger<PlaylistService> logger, IOptions<SpotifyOp
 
     public async Task UpdateDailyPlaylistAsync(CancellationToken cancellationToken = default)
     {
-        SpotifyClient client = await spotifyClientService.GetClientAsync(cancellationToken: cancellationToken);
+        var client = await spotifyClientService.GetClientAsync(cancellationToken: cancellationToken);
         if (client == null)
         {
             throw new PlaylistServiceException("Spotify client is not configured. Please call ConfigureClientAsync first.");
@@ -36,7 +36,7 @@ public class PlaylistService(ILogger<PlaylistService> logger, IOptions<SpotifyOp
         logger.LogInformation("Playlist update completed at: {Time}", DateTime.Now);
     }
 
-    private async Task UpdatePlaylistDescriptionAsync(FullTrack fullTrack, SpotifyClient client, string playlistId, CancellationToken cancellationToken)
+    private async Task UpdatePlaylistDescriptionAsync(FullTrack fullTrack, ISpotifyClient client, string playlistId, CancellationToken cancellationToken)
     {
         logger.LogInformation("Updating playlist description...");
 
@@ -59,7 +59,7 @@ public class PlaylistService(ILogger<PlaylistService> logger, IOptions<SpotifyOp
         return $"{artistName} at the top. Last update: {updateDateTimeValue}";
     }
 
-    private async Task AddTracksAsync(IEnumerable<FullTrack> topTracks, string playlistId, SpotifyClient client, CancellationToken cancellationToken)
+    private async Task AddTracksAsync(IEnumerable<FullTrack> topTracks, string playlistId, ISpotifyClient client, CancellationToken cancellationToken)
     {
         logger.LogInformation("Adding top tracks to the playlist...");
         
@@ -69,7 +69,7 @@ public class PlaylistService(ILogger<PlaylistService> logger, IOptions<SpotifyOp
         logger.LogInformation("Added {Count} tracks to the playlist.", topTracks.Count());
     }
 
-    private async Task<IEnumerable<FullTrack>> GetTopTracksAsync(SpotifyClient client, CancellationToken cancellationToken)
+    private async Task<IEnumerable<FullTrack>> GetTopTracksAsync(ISpotifyClient client, CancellationToken cancellationToken)
     {
         logger.LogInformation("Fetching top tracks...");
 
@@ -79,7 +79,7 @@ public class PlaylistService(ILogger<PlaylistService> logger, IOptions<SpotifyOp
         return topTracksResponse.Items;
     }
 
-    private async Task RemoveCurrentTracksAsync(SpotifyClient client, string playlistId, CancellationToken cancellationToken)
+    private async Task RemoveCurrentTracksAsync(ISpotifyClient client, string playlistId, CancellationToken cancellationToken)
     {
         IEnumerable<FullTrack>? currentTracks = await GetCurrentPlaylistTracksAsync(client, playlistId, cancellationToken);
         if (currentTracks == null || !currentTracks.Any())
@@ -99,7 +99,7 @@ public class PlaylistService(ILogger<PlaylistService> logger, IOptions<SpotifyOp
         logger.LogInformation("Current tracks removed from the playlist.");
     }
 
-    private async Task<IEnumerable<FullTrack>?> GetCurrentPlaylistTracksAsync(SpotifyClient client, string playlistId, CancellationToken cancellationToken)
+    private async Task<IEnumerable<FullTrack>?> GetCurrentPlaylistTracksAsync(ISpotifyClient client, string playlistId, CancellationToken cancellationToken)
     {
         Paging<PlaylistTrack<IPlayableItem>> playlistItems = await client.Playlists.GetItems(playlistId, new PlaylistGetItemsRequest(PlaylistGetItemsRequest.AdditionalTypes.Track), cancellationToken);
         if (playlistItems.Items == null)

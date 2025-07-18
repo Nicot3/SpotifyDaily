@@ -92,7 +92,7 @@ public class SpotifyClientService(IAppConfigService appConfigService, ILogger<Sp
 
     }
 
-    public async Task<SpotifyClient> GetClientAsync(string? code = null, CancellationToken cancellationToken = default)
+    public async Task<ISpotifyClient> GetClientAsync(string? code = null, CancellationToken cancellationToken = default)
     {
 
         if (_appConfig.ExpireDate > DateTime.Now && !string.IsNullOrWhiteSpace(_appConfig.Token))
