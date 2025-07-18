@@ -1,11 +1,16 @@
+using Microsoft.Extensions.Options;
 using SpotifyDaily.Worker.Exceptions;
 using SpotifyDaily.Worker.Helpers;
 using SpotifyDaily.Worker.Models;
+using SpotifyDaily.Worker.Options;
 using SpotifyDaily.Worker.Services.Contracts;
 
 namespace SpotifyDaily.Worker
 {
-    public class Worker(ILogger<Worker> logger, IAppConfigService appConfigService, IPlaylistService playlistService) : BackgroundService
+    public class Worker(ILogger<Worker> logger,
+                        IAppConfigService appConfigService,
+                        IPlaylistService playlistService,
+                        IOptions<WorkerOptions> workerOptions) : BackgroundService
     {
         private AppConfig? _appConfig;
 
@@ -57,7 +62,7 @@ namespace SpotifyDaily.Worker
 
         private async Task WaitForNextRun(DateTime date, CancellationToken cancellationToken)
         {
-            var nextRunDelay = date.CalculateNextRunDelay();
+            var nextRunDelay = date.CalculateNextRunDelay(workerOptions.Value.RunHour);
             logger.LogInformation("Waiting for the next run at: {Time}", date.Add(nextRunDelay));
             await Task.Delay(nextRunDelay, cancellationToken);
         }
