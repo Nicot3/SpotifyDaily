@@ -48,8 +48,6 @@ public class SpotifyClientService(IAppConfigService appConfigService, ILogger<Sp
 
         Client = new SpotifyClient(response.AccessToken);
 
-        OnClientConfigured?.Invoke();
-
         logger.LogInformation("Spotify client configured successfully.");
     }
 
@@ -75,8 +73,6 @@ public class SpotifyClientService(IAppConfigService appConfigService, ILogger<Sp
 
         Client = new SpotifyClient(response.AccessToken);
 
-        OnClientConfigured?.Invoke();
-
         logger.LogInformation("Spotify client configured successfully using refresh token.");
     }
 
@@ -86,7 +82,7 @@ public class SpotifyClientService(IAppConfigService appConfigService, ILogger<Sp
 
         if (!string.IsNullOrWhiteSpace(refreshToken))
         {
-        newAppConfig.RefreshToken = refreshToken;
+            newAppConfig.RefreshToken = refreshToken;
         }
         
         newAppConfig.Token = accessToken;
@@ -113,8 +109,8 @@ public class SpotifyClientService(IAppConfigService appConfigService, ILogger<Sp
 
         if (Client != null)
             {
-            return Client;
-        }
+                return Client;
+            }
 
         try
         {
