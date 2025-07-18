@@ -80,12 +80,16 @@ public class SpotifyClientService(IAppConfigService appConfigService, ILogger<Sp
         logger.LogInformation("Spotify client configured successfully using refresh token.");
     }
 
-    private async Task SaveTokensAsync(string accessToken, string refreshToken, DateTime expiresAt)
+    private async Task SaveTokensAsync(string accessToken, string? refreshToken, DateTime expiresAt)
     {
         var newAppConfig = appConfigService.Current;
 
-        newAppConfig.Token = accessToken;
+        if (!string.IsNullOrWhiteSpace(refreshToken))
+        {
         newAppConfig.RefreshToken = refreshToken;
+        }
+        
+        newAppConfig.Token = accessToken;
         newAppConfig.ExpireDate = expiresAt;
 
         await appConfigService.UpdateAsync(newAppConfig);
@@ -94,14 +98,21 @@ public class SpotifyClientService(IAppConfigService appConfigService, ILogger<Sp
 
     public async Task<SpotifyClient> GetClientAsync(string? code = null, CancellationToken cancellationToken = default)
     {
-        if (Client != null)
-        {
-            return Client;
-        }
 
         if (_appConfig.ExpireDate > DateTime.Now && !string.IsNullOrWhiteSpace(_appConfig.Token))
         {
             Client = new SpotifyClient(_appConfig.Token);
+            return Client;
+        }
+
+        if (_appConfig.ExpireDate < DateTime.Now)
+        {
+            //If token is expired, set client to null to try to configure an existing one
+            Client = null;
+        }
+
+        if (Client != null)
+            {
             return Client;
         }
 
