@@ -29,7 +29,7 @@ namespace SpotifyDaily.Worker
                 DateOnly lastRun = DateOnly.FromDateTime(_appConfig.LastRun ?? DateTime.MinValue);
 
                 //If the worker doesn't run today, run it
-                if (lastRun > dateNow)
+                if (lastRun >= dateNow)
                 {
                     await WaitForNextRun(now, stoppingToken);
                     continue;
