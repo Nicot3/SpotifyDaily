@@ -64,7 +64,7 @@ public class PlaylistService(ILogger<PlaylistService> logger, IOptions<SpotifyOp
         logger.LogInformation("Adding top tracks to the playlist...");
         
         PlaylistReplaceItemsRequest replaceItemsRequest = new(topTracks.Select(t => t.Uri).ToList());
-        _ = await client.Playlists.ReplaceItems(playlistId, replaceItemsRequest, cancellationToken);
+        _= await client.Playlists.ReplacePlaylistItems(playlistId, replaceItemsRequest, cancellationToken);
 
         logger.LogInformation("Added {Count} tracks to the playlist.", topTracks.Count());
     }
@@ -73,7 +73,11 @@ public class PlaylistService(ILogger<PlaylistService> logger, IOptions<SpotifyOp
     {
         logger.LogInformation("Fetching top tracks...");
 
-        UsersTopTracksResponse topTracksResponse = await client.UserProfile.GetTopTracks(new UsersTopItemsRequest(TimeRange.ShortTerm) { Limit = 50 }, cancellationToken);
+        var topTracksResponse = await client.UserProfile.GetTopTracks(new UsersTopItemsRequest(TimeRange.ShortTerm) { Limit = 50 }, cancellationToken);
+        if (topTracksResponse.Items == null || topTracksResponse.Items.Count == 0)
+        {
+            throw new InvalidOperationException("No top tracks found");
+        }
         logger.LogInformation("Fetched {Count} top tracks.", topTracksResponse.Items.Count);
 
         return topTracksResponse.Items;
@@ -89,19 +93,19 @@ public class PlaylistService(ILogger<PlaylistService> logger, IOptions<SpotifyOp
 
         logger.LogInformation("Removing current tracks from the playlist...");
 
-        PlaylistRemoveItemsRequest playlistRemoveItemsRequest = new()
+        var playlistRemoveItemsRequest = new PlaylistRemoveItemsRequestV2()
         {
-            Tracks = currentTracks.Select(ct => new PlaylistRemoveItemsRequest.Item { Uri = ct.Uri }).ToList(),
+            Items = currentTracks.Select(ct => new PlaylistRemoveItemsRequestV2.Item { Uri = ct.Uri }).ToList(),
         };
 
-        _ = await client.Playlists.RemoveItems(playlistId, playlistRemoveItemsRequest, cancellationToken);
+        _ = await client.Playlists.RemovePlaylistItems(playlistId, playlistRemoveItemsRequest, cancellationToken);
 
         logger.LogInformation("Current tracks removed from the playlist.");
     }
 
     private async Task<IEnumerable<FullTrack>?> GetCurrentPlaylistTracksAsync(SpotifyClient client, string playlistId, CancellationToken cancellationToken)
     {
-        Paging<PlaylistTrack<IPlayableItem>> playlistItems = await client.Playlists.GetItems(playlistId, new PlaylistGetItemsRequest(PlaylistGetItemsRequest.AdditionalTypes.Track), cancellationToken);
+        Paging<PlaylistTrack<IPlayableItem>> playlistItems = await client.Playlists.GetPlaylistItems(playlistId, new PlaylistGetItemsRequest(PlaylistGetItemsRequest.AdditionalTypes.Track), cancellationToken);
         if (playlistItems.Items == null)
         {
             return null;
